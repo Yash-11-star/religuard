@@ -26,8 +26,6 @@ jobs:
     name: stack
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      BUILDX_BUILDER: default
     steps:
       - uses: actions/checkout@v4
 
@@ -42,13 +40,16 @@ jobs:
           docker compose exec -T -e PGPASSWORD=religuard postgres \
             psql -U religuard -At -h toxiproxy -p 15432 -d orders -c "select 1"
 
-      - name: Reset clears toxics and recreates databases
+      - name: Reset clears toxics and service state
         run: |
           curl -sf -X POST localhost:8474/proxies/order_db/toxics \
             -d '{"name":"slow","type":"latency","attributes":{"latency":100}}' > /dev/null
           make reset
           test "$(curl -sf localhost:8474/proxies/order_db/toxics)" = "[]"
           make proxies
+
+      - name: Service API tests
+        run: make test-services
 
       - name: Container logs on failure
         if: failure()

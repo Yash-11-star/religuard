@@ -44,3 +44,20 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  payment:
+    build: ./services
+    image: religuard-services:dev   # shared by all three services
+    command: ["uvicorn", "payment.app:app", "--host", "0.0.0.0", "--port", "8001"]
+    environment:
+      DATABASE_URL: postgresql://religuard:religuard@postgres:5432/payments
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8001/health"]   # not localhost: Alpine resolves it to ::1
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    depends_on:
+      postgres:
+        condition: service_healthy
