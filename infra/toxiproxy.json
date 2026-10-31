@@ -1,0 +1,20 @@
+[
+  {
+    "name": "payment",
+    "listen": "0.0.0.0:18001",
+    "upstream": "payment:8001",
+    "enabled": true
+  },
+  {
+    "name": "inventory",
+    "listen": "0.0.0.0:18002",
+    "upstream": "inventory:8002",
+    "enabled": true
+  },
+  {
+    "name": "order_db",
+    "listen": "0.0.0.0:15432",
+    "upstream": "postgres:5432",
+    "enabled": true
+  }
+]

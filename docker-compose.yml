@@ -1,0 +1,46 @@
+# Version 0 stack. The Order service must reach its dependencies only through Toxiproxy:
+#   payment   -> toxiproxy:18001
+#   inventory -> toxiproxy:18002
+#   postgres  -> toxiproxy:15432  (Order's DB only; Payment and Inventory use postgres:5432 directly)
+# Services are added in #2 (payment), #3 (inventory), #4 (order).
+#
+# Disk budget: keep everything for this project under 1 GB (check with `make size`).
+#   - Alpine images only; the three Python services should share ONE image (python:3.12-alpine,
+#     pip --no-cache-dir) and differ only in their command.
+#   - No volumes: Postgres data lives in RAM (tmpfs) and is recreated on every `make up`.
+
+name: religuard
+
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_USER: religuard
+      POSTGRES_PASSWORD: religuard
+    # Small WAL, no fsync: test data is throwaway, so keep RAM use and startup low.
+    command: ["postgres", "-c", "fsync=off", "-c", "max_wal_size=64MB", "-c", "min_wal_size=32MB"]
+    ports:
+      - "55432:5432"   # host port 55432 to avoid clashing with a local Postgres
+    volumes:
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    tmpfs:
+      - /var/lib/postgresql/data:size=256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U religuard"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
+    ports:
+      - "8474:8474"     # control API (used by the property checks)
+      - "18001:18001"   # proxy: payment
+      - "18002:18002"   # proxy: inventory
+      - "15432:15432"   # proxy: order_db
+    volumes:
+      - ./infra/toxiproxy.json:/config/toxiproxy.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy

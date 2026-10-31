@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Env / secrets
+.env
+.env.*
+
+# Course documents kept local only (the proposal contains student IDs)
+/Project_Proposal_Template__CS59300_ASE__Vedant_and_Yash.pdf
+/Midpoint Project Report Instructions.pdf
+
+# Raw experiment output (summaries in results/ are committed)
+results/raw/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# LaTeX build files
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.fdb_latexmk
+*.fls
