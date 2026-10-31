@@ -35,6 +35,110 @@ How to work a ticket: tick the checklist boxes in the issue as you go, open a PR
 
 ---
 
+## Order of work
+
+**Rule:** always pick the next open ticket in your own queue below. If it is blocked, skip to the next unblocked one and come back.
+
+Each ticket also shows this at the top (its phase, your step number, what it waits on, what it unblocks), and GitHub marks a ticket **Blocked** until the tickets it depends on are closed.
+
+### Start right now (nothing blocks these)
+
+| Yash | Vedant |
+|---|---|
+| [#1](https://github.com/Yash-11-star/religuard/issues/1) Repo skeleton + docker-compose | [#6](https://github.com/Yash-11-star/religuard/issues/6) Property-check framework |
+| | [#11](https://github.com/Yash-11-star/religuard/issues/11) 8 change prompts |
+| | [#13](https://github.com/Yash-11-star/religuard/issues/13) Related Work, [#14](https://github.com/Yash-11-star/religuard/issues/14) Evaluation Plan |
+
+### Each person's queue
+
+| Step | Yash | Vedant |
+|---|---|---|
+| 1 | #1 Repo skeleton + compose | #6 Property-check framework |
+| 2 | #2 Payment service | #7 Checks P1–P3 |
+| 3 | #3 Inventory service | #8 Checks P4–P6 |
+| 4 | #4 Order service | #9 Checks P7–P10 |
+| 5 | #5 Functional tests | #11 8 change prompts |
+| 6 | **#10 Freeze Version 0** (together) | #13 Report: Related Work |
+| 7 | #15 Report: Intro + Method/Progress | #14 Report: Evaluation Plan |
+| 8 | #16 Report: assemble + **submit** | **#10 Freeze Version 0** (together) |
+| 9 | #18 Move to Kind | #12 First agent run |
+| 10 | #20 Tracing + logs | #17 Agent harness |
+| 11 | #19 Chaos Mesh | #21 Agents headless (Copilot part) |
+| 12 | #21 Agents headless (Claude + Codex part) | #22 Evidence builder |
+| 13 | #24 Study runs (Claude + Codex) | #23 Repair loop |
+| 14 | #26 Analysis RQ1 + RQ2 | #24 Study runs (Copilot) |
+| 15 | #27 Root-cause labels (together) | #25 Repair experiment |
+| 16 | #29 Final report (together) | #27 Root-cause labels (together) |
+| 17 | #30 Public release | #28 Analysis RQ3 |
+| 18 | | #29 Final report (together) |
+
+Steps 1–8 are the midpoint (M0). Vedant writes the property checks (#7–#9) and the report sections (#13, #14) against the endpoints described in #2–#4, so they don't have to wait for Yash's services. The checks get their first real run at #10.
+
+### Dependency graph
+
+An arrow `A --> B` means B cannot start until A is done. Blue = Yash, green = Vedant, purple = both.
+
+```mermaid
+flowchart LR
+  subgraph M0["M0: Midpoint (Nov 1)"]
+    I1["#1 Skeleton"] --> I2["#2 Payment"]
+    I1 --> I3["#3 Inventory"]
+    I2 --> I4["#4 Order"]
+    I3 --> I4
+    I4 --> I5["#5 Functional tests"]
+    I6["#6 Check framework"] --> I7["#7 P1-P3"]
+    I6 --> I8["#8 P4-P6"]
+    I6 --> I9["#9 P7-P10"]
+    I5 --> I10["#10 Freeze v0"]
+    I7 --> I10
+    I8 --> I10
+    I9 --> I10
+    I10 --> I12["#12 First agent run"]
+    I11["#11 Change prompts"] --> I12
+    I12 --> I15["#15 Method + Progress"]
+    I13["#13 Related Work"] --> I16["#16 Submit midpoint"]
+    I14["#14 Eval Plan"] --> I16
+    I15 --> I16
+  end
+  subgraph M1["M1-M2: Infra + ReliGuard"]
+    I18["#18 Kind"] --> I19["#19 Chaos Mesh"]
+    I17["#17 Harness"] --> I21["#21 Agents headless"]
+    I17 --> I22["#22 Evidence builder"]
+    I20["#20 Tracing"] --> I22
+    I22 --> I23["#23 Repair loop"]
+  end
+  subgraph M3["M3-M5: Study, analysis, final"]
+    I24["#24 Study runs"] --> I25["#25 Repair experiment"]
+    I24 --> I26["#26 RQ1+RQ2"]
+    I24 --> I27["#27 Root causes"]
+    I25 --> I28["#28 RQ3"]
+    I26 --> I29["#29 Final report"]
+    I27 --> I29
+    I28 --> I29
+    I29 --> I30["#30 Release"]
+  end
+  I10 --> I17
+  I11 --> I17
+  I10 --> I18
+  I10 --> I20
+  I19 --> I24
+  I21 --> I24
+  I23 --> I25
+
+  classDef yash fill:#dbe9ff,stroke:#1f6feb,color:#0b1f44
+  classDef vedant fill:#dcf5e3,stroke:#2da44e,color:#0b2e17
+  classDef both fill:#ece2ff,stroke:#8250df,color:#2a1052
+  class I1,I2,I3,I4,I5,I15,I16,I18,I19,I20,I26,I30 yash
+  class I6,I7,I8,I9,I11,I12,I13,I14,I17,I22,I23,I25,I28 vedant
+  class I10,I21,I24,I27,I29 both
+```
+
+**Critical path** (the longest chain; a delay on any of these delays the whole project):
+#1 → #2/#3 → #4 → #5 → #10 → #17 → #22 → #23 → #25 → #28 → #29 → #30.
+For the midpoint, the critical path is Yash's services (#1–#5). If they slip, cut #12 to a single change and submit with the checks and the plan.
+
+---
+
 ## Midpoint plan (due Nov 1, 11:59 PM)
 
 ### Step 1: Set up a smaller Version 0 (Yash)
