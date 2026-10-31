@@ -1,0 +1,59 @@
+# CI for every PR into main. Kept inside GitHub's free tier:
+#   - public repo + standard `ubuntu-latest` runner = free, unlimited minutes (never use larger runners)
+#   - hard 10-minute timeout, superseded runs cancelled, docs-only changes skipped
+#   - no artifacts, no caches (no storage used), no schedule
+# Each later ticket adds its own test step (#5 functional tests, #6-#9 property checks).
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore: ["**.md", "report/**", "changes/**"]
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "report/**", "changes/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stack:
+    name: stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BUILDX_BUILDER: default
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate compose file
+        run: docker compose config --quiet
+
+      - name: Start stack
+        run: make up
+
+      - name: Postgres reachable through the order_db proxy
+        run: |
+          docker compose exec -T -e PGPASSWORD=religuard postgres \
+            psql -U religuard -At -h toxiproxy -p 15432 -d orders -c "select 1"
+
+      - name: Reset clears toxics and recreates databases
+        run: |
+          curl -sf -X POST localhost:8474/proxies/order_db/toxics \
+            -d '{"name":"slow","type":"latency","attributes":{"latency":100}}' > /dev/null
+          make reset
+          test "$(curl -sf localhost:8474/proxies/order_db/toxics)" = "[]"
+          make proxies
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose logs --tail=100
+
+      - name: Stop stack
+        if: always()
+        run: make down

@@ -1,6 +1,6 @@
 # Build with Docker Desktop's built-in builder, never the globally active buildx builder
-# (which may belong to another project and keep its own large cache).
-export BUILDX_BUILDER := desktop-linux
+# (which may belong to another project and keep its own large cache). CI overrides this.
+export BUILDX_BUILDER ?= desktop-linux
 
 COMPOSE   := docker compose
 TOXIPROXY := http://localhost:8474
