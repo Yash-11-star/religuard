@@ -11,7 +11,7 @@ The project has two parts:
 1. **Study.** Drive three coding agents (Claude Code, Codex CLI, GitHub Copilot's coding agent) through the same 8 changes to a checkout microservice app, 3 runs each (72 versions), and measure how often, where, and why reliability regressions appear.
 2. **Tool: ReliGuard.** After every agent change, inject faults, re-check *every* reliability property, give the agent structured evidence when one fails, and accept a repair only if the whole property suite passes again.
 
-Documents: [Project proposal](Project_Proposal_Template__CS59300_ASE__Vedant_and_Yash.pdf) · [Midpoint report instructions](Midpoint%20Project%20Report%20Instructions.pdf)
+The proposal and the course's midpoint instructions are kept out of this repo (shared between the authors directly).
 
 ---
 
@@ -241,7 +241,53 @@ ACM double-column template, ≤ 8 pages: updated Abstract/Intro, Related Work, M
 
 ---
 
-## Planned repository layout
+## Running locally
+
+Requires Docker Desktop (running) and Python 3.
+
+```bash
+make up        # start Postgres + Toxiproxy (and the services, once added), list proxies
+make proxies   # show proxies and any active toxics
+make reset     # remove all toxics, re-enable proxies, recreate the databases
+make down      # stop everything (the database lives in RAM, so its data is discarded)
+make size      # disk used by this project's images, volumes, and build cache
+make prune     # remove this project's dangling images and our build cache
+make clean     # stop everything and remove this project's images too
+make help      # list all targets
+```
+
+**Disk budget: under 1 GB.** Currently ~390 MB (Postgres Alpine 366 MB + Toxiproxy 23 MB), no volumes, no build cache. To keep it that way:
+
+- Use Alpine images. The three Python services share **one** image built from `python:3.12-alpine` with `pip install --no-cache-dir`; only the start command differs.
+- No Docker volumes. Postgres stores its data in RAM (tmpfs, 256 MB cap).
+- Builds use the `desktop-linux` builder (set in the Makefile), not whatever buildx builder is globally active, so other projects' caches are never touched or grown.
+- Run `make prune` after many rebuilds and `make size` to check.
+
+| Component | Host port | Notes |
+|---|---|---|
+| Order service | 8000 | added in #4 |
+| Payment service | 8001 | added in #2 |
+| Inventory service | 8002 | added in #3 |
+| Postgres | 55432 | user/password `religuard`; databases `orders`, `payments`, `inventory` |
+| Toxiproxy API | 8474 | used by the property checks to inject faults |
+| Proxy `payment` | 18001 | Order → Payment |
+| Proxy `inventory` | 18002 | Order → Inventory |
+| Proxy `order_db` | 15432 | Order → Postgres (for P10) |
+
+Inside Docker, the Order service must use `toxiproxy:18001`, `toxiproxy:18002`, and `toxiproxy:15432`, never the services directly; otherwise faults are not injected.
+
+Try a fault by hand:
+
+```bash
+curl -X POST localhost:8474/proxies/payment/toxics \
+  -d '{"name":"slow","type":"latency","attributes":{"latency":5000}}'
+make proxies   # shows payment toxics: slow(latency)
+make reset     # removes it
+```
+
+Note: a latency toxic delays every round trip, so on `order_db` a new Postgres connection (several round trips) is much slower than the toxic value. Keep a warm connection pool in the Order service.
+
+## Repository layout
 
 ```
 services/{order,payment,inventory}/   FastAPI services
