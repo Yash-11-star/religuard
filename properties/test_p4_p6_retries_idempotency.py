@@ -19,9 +19,10 @@ def test_p4_payment_503_burst_bounded_retries():
     resp, _ = checkout()
     order_id = resp.json().get("order_id")
     assert order_id, f"no order_id in response: {resp.text}"
-    assert resp.status_code >= 500, f"expected an error, got {resp.status_code}: {resp.text}"
+    # Read the count before judging the response, so it is recorded whatever the checkout returned.
     n = attempts(order_id)
-    assert 1 <= n <= MAX_PAYMENT_ATTEMPTS, f"Payment received {n} attempts"
+    assert 1 <= n <= MAX_PAYMENT_ATTEMPTS, f"Payment received {n} attempts (checkout returned {resp.status_code})"
+    assert resp.status_code >= 500, f"expected an error, got {resp.status_code}: {resp.text}"
 
 
 def test_p5_lost_charge_response_then_retry_charges_once():
