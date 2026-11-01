@@ -34,11 +34,15 @@ def test_p7_payment_restored_checkouts_recover_within_10s():
     assert recovery <= MAX_RECOVERY_SECONDS
 
 
-@pytest.mark.parametrize("fault", ["decline", "503"])
+@pytest.mark.parametrize("fault", ["decline", "payment_down"])
 def test_p8_failed_payment_releases_reservation(fault):
-    """P8: When Payment declines or keeps failing, the stock reserved for that checkout is given back."""
+    """P8: When Payment declines or is down, the stock reserved for that checkout is given back."""
     before = stock()
-    set_payment_fault(fault, 10)
+    if fault == "decline":
+        set_payment_fault("decline", 10)
+    else:
+        # Down for the whole checkout, so no retry policy can get the payment through.
+        disable_proxy("payment")
     resp, _ = checkout(qty=3)
     assert resp.status_code >= 400, f"expected the checkout to fail, got {resp.status_code}: {resp.text}"
 

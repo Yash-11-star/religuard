@@ -1,0 +1,3 @@
+Support needs to see what happened to an order over time. Add an order status history: every time
+an order's status changes (including when it is created), record the old status, new status,
+reason, and timestamp in a new order_events table. Add GET /orders/{id}/history to return it.

@@ -250,6 +250,9 @@ make up        # start Postgres + Toxiproxy (and the services, once added), list
 make proxies   # show proxies and any active toxics
 make reset     # remove all toxics, re-enable proxies, clear every service's data and faults
 make test-services  # per-service API tests against the running stack (creates .venv on first run)
+make test-functional  # no-fault functional tests: does the store work? (what agents usually check)
+make properties     # reliability property checks P1-P10 (also: make test-properties)
+python3 harness/evaluate.py --out results/<dir> --runs 5  # reset + both suites per run, JSON per test
 make down      # stop everything (the database lives in RAM, so its data is discarded)
 make size      # disk used by this project's images, volumes, and build cache
 make prune     # remove this project's dangling images and our build cache

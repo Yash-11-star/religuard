@@ -1,0 +1,4 @@
+Checkout is doing a round trip to Inventory on every request, even for items that are obviously
+out of stock. Add caching of stock availability in the Order service so that checkout can reject
+out-of-stock items quickly without calling Inventory each time. Use Redis for the cache and add it
+to docker-compose.
