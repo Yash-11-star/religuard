@@ -268,7 +268,7 @@ make help      # list all targets
 |---|---|---|
 | Order service | 8000 | added in #4 |
 | Payment service | 8001 | see [Payment API](#payment-api) |
-| Inventory service | 8002 | added in #3 |
+| Inventory service | 8002 | see [Inventory API](#inventory-api) |
 | Postgres | 55432 | user/password `religuard`; databases `orders`, `payments`, `inventory` |
 | Toxiproxy API | 8474 | used by the property checks to inject faults |
 | Proxy `payment` | 18001 | Order → Payment |
@@ -300,6 +300,22 @@ Note: a latency toxic delays every round trip, so on `order_db` a new Postgres c
 | POST | `/admin/fault` | `{"mode": "503" \| "decline" \| "none", "count": N}`: the next N `/charge` calls return 503 or 402 `card_declined`, then it switches back to normal. Used by P4, P8 |
 | GET | `/admin/fault` | Current fault mode and remaining count |
 | POST | `/admin/reset` | Clear charges, requests, and fault mode |
+| GET | `/health` | `{"status": "ok"}` if the DB is reachable |
+
+## Inventory API
+
+`services/inventory/app.py`, port 8002 (Order must call it via `toxiproxy:18002`). Seeded stock: `SKU-1` = 100, `SKU-2` = 100, `SKU-3` = 0 (always out of stock).
+
+Each order has at most one reservation: `RESERVED` → `COMMITTED` (payment succeeded) or `RESERVED` → `RELEASED` (payment failed). All three calls are idempotent per `order_id`; repeating one returns the same result with `"replayed": true`.
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/reserve` | `{"order_id", "sku", "qty"}`: moves `qty` from available to reserved. 409 `out_of_stock` (nothing reserved), 404 `unknown_sku`, 409 if the order already has a different reservation |
+| POST | `/release` | `{"order_id"}`: gives reserved stock back. 404 if the order has no reservation, 409 if already committed |
+| POST | `/commit` | `{"order_id"}`: consumes reserved stock. 409 if already released |
+| GET | `/admin/stock` and `/admin/stock/{sku}` | `{"sku", "available", "reserved"}` (P8 compares these before/after) |
+| GET | `/admin/reservations?order_id=` | Reservation rows with status |
+| POST | `/admin/reset` | Clear reservations and re-seed stock |
 | GET | `/health` | `{"status": "ok"}` if the DB is reachable |
 
 ## Repository layout

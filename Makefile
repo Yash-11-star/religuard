@@ -4,8 +4,8 @@ export BUILDX_BUILDER ?= default
 
 COMPOSE   := docker compose
 TOXIPROXY := http://localhost:8474
-# Services with POST /admin/reset. Add inventory (8002) in #3 and order (8000) in #4.
-SERVICE_PORTS := 8001
+# Services with POST /admin/reset (payment, inventory). Add order (8000) in #4.
+SERVICE_PORTS := 8001 8002
 VENV      := .venv
 
 .PHONY: help up down reset proxies ps logs clean size prune venv test-services
