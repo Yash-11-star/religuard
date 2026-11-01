@@ -1,0 +1,5 @@
+Add a Notification service. After a checkout is confirmed, the customer should get an
+order-confirmation email. For now the Notification service does not need to send real email: it
+should store each notification (order id, recipient, message, created time) in its own database
+and expose GET /notifications?order_id= so we can see what was sent. Checkout requests should now
+accept an optional customer email. Run it as a new service in docker-compose like the others.

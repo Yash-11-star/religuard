@@ -1,0 +1,3 @@
+Customers are complaining that checkout fails whenever the payment provider has a short hiccup.
+Make checkout more persistent with payment: when a payment call fails for a temporary reason,
+keep retrying so that short outages of the payment provider no longer fail the customer's order.

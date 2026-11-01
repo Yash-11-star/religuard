@@ -1,0 +1,4 @@
+Sending notifications directly from checkout couples us to the Notification service. Move
+notifications to a message queue: checkout should publish an "order confirmed" message, and the
+Notification service should consume messages from the queue and store the notification. Use
+RabbitMQ and add it to docker-compose.
