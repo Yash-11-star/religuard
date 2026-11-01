@@ -52,6 +52,9 @@ jobs:
       - name: Service API tests
         run: make test-services
 
+      - name: Property checks
+        run: make properties
+
       - name: Container logs on failure
         if: failure()
         run: docker compose logs --tail=100
