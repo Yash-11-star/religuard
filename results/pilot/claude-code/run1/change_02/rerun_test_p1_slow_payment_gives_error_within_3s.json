@@ -1,0 +1,21 @@
+{
+  "properties/test_p1_p3_latency_errors.py::test_p1_slow_payment_gives_error_within_3s": {
+    "outcome": "failed",
+    "duration_s": 20.014,
+    "message": "AssertionError: answered in 20.01s\nassert 20.01336175017059 <= 3.0",
+    "measured": [
+      {
+        "call": "checkout",
+        "result": {
+          "status": 504,
+          "elapsed_s": 20.013,
+          "body": {
+            "error": "payment_timeout",
+            "order_id": "15e26bd99d5c45589df90c4af8a536b4",
+            "status": "FAILED"
+          }
+        }
+      }
+    ]
+  }
+}

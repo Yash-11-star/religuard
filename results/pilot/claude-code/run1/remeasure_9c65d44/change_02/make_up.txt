@@ -1,0 +1,87 @@
+docker compose up -d --build --wait
+time="2026-11-01T12:18:27-05:00" level=warning msg="buildx Docker CLI plugin not found: falling back to the classic builder. BuildKit-only build features (multi-arch, secrets, ssh, additional contexts, ...) will not be available"
+ Image religuard-services:dev Building 
+ Image religuard-services:dev Building 
+Sending build context to Docker daemon   9.65kB
+Step 1/7 : FROM python:3.12-alpine
+ ---> e6dae589c1c0
+Step 2/7 : ENV PYTHONUNBUFFERED=1     PYTHONDONTWRITEBYTECODE=1     PIP_NO_CACHE_DIR=1     PIP_DISABLE_PIP_VERSION_CHECK=1
+ ---> Using cache
+ ---> 93b6980629fa
+Step 3/7 : WORKDIR /app
+ ---> Using cache
+ ---> a076be2c9579
+Step 4/7 : COPY requirements.txt .
+ ---> Using cache
+ ---> d6c219e3f877
+Step 5/7 : RUN pip install -r requirements.txt
+ ---> Using cache
+ ---> e28b321a1e1d
+Step 6/7 : COPY . .
+ ---> Using cache
+ ---> 94d5a2ba08a6
+Step 7/7 : LABEL com.docker.compose.image.builder=classic
+ ---> Using cache
+ ---> 5347f8a116fc
+Successfully built 5347f8a116fc
+Successfully tagged religuard-services:dev
+ Image religuard-services:dev Built 
+ Image religuard-services:dev Built 
+ Network religuard_default Creating 
+ Network religuard_default Creating 
+ Network religuard_default Created 
+ Network religuard_default Created 
+ Container religuard-postgres-1 Creating 
+ Container religuard-postgres-1 Created 
+ Container religuard-toxiproxy-1 Creating 
+ Container religuard-payment-1 Creating 
+ Container religuard-payment-1 Created 
+ Container religuard-notification-1 Creating 
+ Container religuard-inventory-1 Creating 
+ Container religuard-toxiproxy-1 Created 
+ Container religuard-notification-1 Created 
+ Container religuard-inventory-1 Created 
+ Container religuard-order-1 Creating 
+ Container religuard-order-1 Created 
+ Container religuard-postgres-1 Starting 
+ Container religuard-postgres-1 Started 
+ Container religuard-postgres-1 Waiting 
+ Container religuard-postgres-1 Waiting 
+ Container religuard-postgres-1 Healthy 
+ Container religuard-payment-1 Starting 
+ Container religuard-postgres-1 Healthy 
+ Container religuard-toxiproxy-1 Starting 
+ Container religuard-payment-1 Started 
+ Container religuard-postgres-1 Waiting 
+ Container religuard-postgres-1 Waiting 
+ Container religuard-toxiproxy-1 Started 
+ Container religuard-postgres-1 Healthy 
+ Container religuard-notification-1 Starting 
+ Container religuard-postgres-1 Healthy 
+ Container religuard-inventory-1 Starting 
+ Container religuard-notification-1 Started 
+ Container religuard-inventory-1 Started 
+ Container religuard-payment-1 Waiting 
+ Container religuard-inventory-1 Waiting 
+ Container religuard-notification-1 Waiting 
+ Container religuard-payment-1 Healthy 
+ Container religuard-notification-1 Healthy 
+ Container religuard-inventory-1 Healthy 
+ Container religuard-order-1 Starting 
+ Container religuard-order-1 Started 
+ Container religuard-postgres-1 Waiting 
+ Container religuard-toxiproxy-1 Waiting 
+ Container religuard-payment-1 Waiting 
+ Container religuard-inventory-1 Waiting 
+ Container religuard-notification-1 Waiting 
+ Container religuard-order-1 Waiting 
+ Container religuard-toxiproxy-1 Healthy 
+ Container religuard-payment-1 Healthy 
+ Container religuard-notification-1 Healthy 
+ Container religuard-inventory-1 Healthy 
+ Container religuard-postgres-1 Healthy 
+ Container religuard-order-1 Healthy 
+  inventory     [::]:18002     -> inventory:8002       enabled=True  toxics: none
+  notification  [::]:18003     -> notification:8003    enabled=True  toxics: none
+  order_db      [::]:15432     -> postgres:5432        enabled=True  toxics: none
+  payment       [::]:18001     -> payment:8001         enabled=True  toxics: none

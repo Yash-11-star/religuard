@@ -1,0 +1,50 @@
+order-1  | INFO:     127.0.0.1:35008 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:35020 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:52184 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:52196 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:52208 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:52218 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "POST /checkout HTTP/1.1" 504 Gateway Timeout
+order-1  | INFO:     172.18.0.1:34724 - "POST /checkout HTTP/1.1" 503 Service Unavailable
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:52230 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /admin/orders?status=PENDING HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "POST /admin/reset HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "POST /admin/reset HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "POST /checkout HTTP/1.1" 503 Service Unavailable
+order-1  | INFO:     127.0.0.1:36046 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "POST /checkout HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:34724 - "POST /admin/reset HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:54472 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:54472 - "POST /admin/reset HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:36060 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:36062 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:36076 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:36090 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:32994 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:33008 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:33024 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:33038 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:33052 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     127.0.0.1:35866 - "GET /health HTTP/1.1" 200 OK
+order-1  | INFO:     172.18.0.1:54472 - "POST /checkout HTTP/1.1" 504 Gateway Timeout
+order-1  | INFO:     172.18.0.1:54472 - "POST /admin/reset HTTP/1.1" 200 OK

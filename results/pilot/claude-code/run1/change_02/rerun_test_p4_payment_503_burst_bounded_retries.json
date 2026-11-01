@@ -1,0 +1,21 @@
+{
+  "properties/test_p4_p6_retries_idempotency.py::test_p4_payment_503_burst_bounded_retries": {
+    "outcome": "failed",
+    "duration_s": 13.102,
+    "message": "AssertionError: expected an error, got 200: {\"order_id\":\"7dbc3382fad449ac8d3abfa459c3dd6c\",\"status\":\"CONFIRMED\",\"charge_id\":1}\nassert 200 >= 500\n +  where 200 = <Response [200 OK]>.status_code",
+    "measured": [
+      {
+        "call": "checkout",
+        "result": {
+          "status": 200,
+          "elapsed_s": 13.101,
+          "body": {
+            "order_id": "7dbc3382fad449ac8d3abfa459c3dd6c",
+            "status": "CONFIRMED",
+            "charge_id": 1
+          }
+        }
+      }
+    ]
+  }
+}
