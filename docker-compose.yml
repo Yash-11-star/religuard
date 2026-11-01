@@ -61,3 +61,46 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  inventory:
+    image: religuard-services:dev   # built by the payment service
+    pull_policy: never
+    command: ["uvicorn", "inventory.app:app", "--host", "0.0.0.0", "--port", "8002"]
+    environment:
+      DATABASE_URL: postgresql://religuard:religuard@postgres:5432/inventory
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8002/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    depends_on:
+      postgres:
+        condition: service_healthy
+      payment:
+        condition: service_started   # ensures the shared image is built first
+
+  order:
+    image: religuard-services:dev   # built by the payment service
+    pull_policy: never
+    command: ["uvicorn", "order.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      # Every dependency goes through Toxiproxy so the property checks can inject faults.
+      DATABASE_URL: postgresql://religuard:religuard@toxiproxy:15432/orders
+      PAYMENT_URL: http://toxiproxy:18001
+      INVENTORY_URL: http://toxiproxy:18002
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    depends_on:
+      toxiproxy:
+        condition: service_started
+      payment:
+        condition: service_healthy
+      inventory:
+        condition: service_healthy

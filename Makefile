@@ -4,11 +4,11 @@ export BUILDX_BUILDER ?= default
 
 COMPOSE   := docker compose
 TOXIPROXY := http://localhost:8474
-# Services with POST /admin/reset. Add inventory (8002) in #3 and order (8000) in #4.
-SERVICE_PORTS := 8001
+# Services with POST /admin/reset. Order first, so its background finalizers stop before the others reset.
+SERVICE_PORTS := 8000 8001 8002
 VENV      := .venv
 
-.PHONY: help up down reset proxies ps logs clean size prune venv test-services
+.PHONY: help up down reset proxies ps logs clean size prune venv test-services properties
 
 help:  ## Show available targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -38,6 +38,9 @@ $(VENV)/.installed: tests/requirements.txt
 
 test-services: venv  ## Run per-service API tests against the running stack
 	$(VENV)/bin/pytest -q tests/services
+
+properties: venv  ## Run the reliability property checks P1-P10 against the running stack
+	$(VENV)/bin/pytest -v --durations=0 --durations-min=0.1 properties
 
 proxies:  ## List Toxiproxy proxies and their toxics
 	@python3 infra/show_proxies.py $(TOXIPROXY)

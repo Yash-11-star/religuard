@@ -1,14 +1,15 @@
 # CI for every PR into main. Kept inside GitHub's free tier:
 #   - public repo + standard `ubuntu-latest` runner = free, unlimited minutes (never use larger runners)
-#   - hard 10-minute timeout, superseded runs cancelled, docs-only changes skipped
+#   - hard 10-minute timeout, superseded runs cancelled, docs-only pushes to main skipped
 #   - no artifacts, no caches (no storage used), no schedule
+# PRs always run, even docs-only ones: "stack" is a required check on main, and a skipped
+# workflow never reports it, which would block the merge.
 # Each later ticket adds its own test step (#5 functional tests, #6-#9 property checks).
 name: CI
 
 on:
   pull_request:
     branches: [main]
-    paths-ignore: ["**.md", "report/**", "changes/**"]
   push:
     branches: [main]
     paths-ignore: ["**.md", "report/**", "changes/**"]
@@ -50,6 +51,9 @@ jobs:
 
       - name: Service API tests
         run: make test-services
+
+      - name: Property checks
+        run: make properties
 
       - name: Container logs on failure
         if: failure()

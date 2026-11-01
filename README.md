@@ -266,9 +266,9 @@ make help      # list all targets
 
 | Component | Host port | Notes |
 |---|---|---|
-| Order service | 8000 | added in #4 |
+| Order service | 8000 | see [Order API](#order-api) |
 | Payment service | 8001 | see [Payment API](#payment-api) |
-| Inventory service | 8002 | added in #3 |
+| Inventory service | 8002 | see [Inventory API](#inventory-api) |
 | Postgres | 55432 | user/password `religuard`; databases `orders`, `payments`, `inventory` |
 | Toxiproxy API | 8474 | used by the property checks to inject faults |
 | Proxy `payment` | 18001 | Order → Payment |
@@ -288,6 +288,43 @@ make reset     # removes it
 
 Note: a latency toxic delays every round trip, so on `order_db` a new Postgres connection (several round trips) is much slower than the toxic value. Keep a warm connection pool in the Order service.
 
+## Order API
+
+`services/order/app.py`, port 8000. This is the service the coding agents change. It reaches Payment, Inventory, and its own database **only through Toxiproxy**.
+
+Checkout flow: create `PENDING` order → reserve stock → charge → commit stock → `CONFIRMED`. On any failure the order becomes `FAILED` and reserved stock is released.
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/checkout` | Body `{"sku", "qty", "amount"}`, optional header `Idempotency-Key`. 200 `CONFIRMED`; a repeated key returns the same order (no second charge); 202 if paid but still finalizing |
+| GET | `/orders/{id}` | One order |
+| GET | `/admin/orders?status=` | Orders, optionally filtered by `PENDING` / `CONFIRMED` / `FAILED` (P9 checks `PENDING` is empty) |
+| POST | `/admin/reset` | Stop background work and delete all orders |
+| GET | `/health` | 200 if its DB is reachable, else 503 |
+
+Errors are JSON `{"error": "<code>", "order_id": "...", "status": "FAILED"}`:
+
+| Code | HTTP | When |
+|---|---|---|
+| `out_of_stock` / `unknown_sku` | 409 / 404 | Inventory refused |
+| `card_declined` | 402 | Payment declined |
+| `payment_unavailable` / `inventory_unavailable` | 503 | Connection refused or 503s after all attempts |
+| `payment_timeout` / `inventory_timeout` | 504 | Attempts timed out |
+| `database_unavailable` | 503 | Orders DB too slow or down |
+| `idempotency_key_reused_with_different_request` | 409 | Same key, different body |
+
+**Reliability behaviour of Version 0** (constants at the top of `services/order/app.py`; these are what P1–P10 check):
+
+| Setting | Value |
+|---|---|
+| Timeout per call to Payment / Inventory | 1 s |
+| Attempts per call | 3, backoff 100 ms × 2ⁿ ± 50% jitter; retries only timeouts, connection errors, 502/503/504 |
+| Whole-checkout deadline | 2.5 s (the client always gets an answer by then) |
+| Timeout per DB statement | 1 s |
+| Payment `Idempotency-Key` | `order-<order_id>`, the same on every retry |
+| Finishing an order (commit/release + final status) | background task, retries until it succeeds |
+| Reaper | every 1 s, fails `PENDING` orders older than 3 s that nothing is finishing |
+
 ## Payment API
 
 `services/payment/app.py`, port 8001 (Order must call it via `toxiproxy:18001`).
@@ -300,6 +337,22 @@ Note: a latency toxic delays every round trip, so on `order_db` a new Postgres c
 | POST | `/admin/fault` | `{"mode": "503" \| "decline" \| "none", "count": N}`: the next N `/charge` calls return 503 or 402 `card_declined`, then it switches back to normal. Used by P4, P8 |
 | GET | `/admin/fault` | Current fault mode and remaining count |
 | POST | `/admin/reset` | Clear charges, requests, and fault mode |
+| GET | `/health` | `{"status": "ok"}` if the DB is reachable |
+
+## Inventory API
+
+`services/inventory/app.py`, port 8002 (Order must call it via `toxiproxy:18002`). Seeded stock: `SKU-1` = 100, `SKU-2` = 100, `SKU-3` = 0 (always out of stock).
+
+Each order has at most one reservation: `RESERVED` → `COMMITTED` (payment succeeded) or `RESERVED` → `RELEASED` (payment failed). All three calls are idempotent per `order_id`; repeating one returns the same result with `"replayed": true`.
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/reserve` | `{"order_id", "sku", "qty"}`: moves `qty` from available to reserved. 409 `out_of_stock` (nothing reserved), 404 `unknown_sku`, 409 if the order already has a different reservation |
+| POST | `/release` | `{"order_id"}`: gives reserved stock back. 404 if the order has no reservation, 409 if already committed |
+| POST | `/commit` | `{"order_id"}`: consumes reserved stock. 409 if already released |
+| GET | `/admin/stock` and `/admin/stock/{sku}` | `{"sku", "available", "reserved"}` (P8 compares these before/after) |
+| GET | `/admin/reservations?order_id=` | Reservation rows with status |
+| POST | `/admin/reset` | Clear reservations and re-seed stock |
 | GET | `/health` | `{"status": "ok"}` if the DB is reachable |
 
 ## Repository layout
