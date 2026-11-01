@@ -1,0 +1,3 @@
+Add the ability to cancel an order: POST /orders/{id}/cancel. Cancelling a confirmed order must
+refund the payment and put the stock back. Add whatever endpoints Payment and Inventory need for
+this. Cancelling an order that is already cancelled or failed should be handled sensibly.

@@ -1,0 +1,3 @@
+We are seeing bots hammering checkout. Add rate limiting to POST /checkout: each customer may
+place at most 5 checkouts per minute. Identify the customer by an X-Customer-Id header (requests
+without it share one anonymous limit). Return a clear error when the limit is exceeded.

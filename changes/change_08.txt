@@ -1,0 +1,3 @@
+Our payment provider's documented response time is up to 4 seconds during peak hours, and
+checkouts are failing at peak because we give up on payment too early. Raise the payment call
+timeout to 5 seconds and adjust anything else needed so slow-but-successful payments complete.
