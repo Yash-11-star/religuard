@@ -1,0 +1,11 @@
+--- a/services/order/app.py
++++ b/services/order/app.py
+@@ -136,7 +136,7 @@
+             break
+         try:
+             async with asyncio.timeout(budget):
+-                resp = await app.state.http.post(url, **kwargs)
++                resp = await app.state.http.post(url, **{**kwargs, "headers": {k: v + f"-{attempt}" for k, v in kwargs.get("headers", {}).items()}})
+             if resp.status_code not in RETRYABLE_STATUS:
+                 return resp
+             timed_out = False

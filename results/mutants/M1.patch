@@ -1,0 +1,11 @@
+--- a/services/order/app.py
++++ b/services/order/app.py
+@@ -31,7 +31,7 @@
+ INVENTORY_URL = os.environ.get("INVENTORY_URL", "http://toxiproxy:18002")
+ 
+ ATTEMPT_TIMEOUT = 1.0       # seconds per call to Payment or Inventory
+-MAX_ATTEMPTS = 3            # tries per call, including the first
++MAX_ATTEMPTS = 6            # tries per call, including the first
+ BACKOFF_BASE = 0.1          # seconds; before retry n we wait BACKOFF_BASE * 2**n, +-50% jitter
+ CHECKOUT_DEADLINE = 2.5     # seconds; every checkout answers within this
+ DB_TIMEOUT = 1.0            # seconds per DB statement (including getting a connection)

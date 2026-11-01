@@ -1,0 +1,11 @@
+--- a/services/order/app.py
++++ b/services/order/app.py
+@@ -34,7 +34,7 @@
+ MAX_ATTEMPTS = 3            # tries per call, including the first
+ BACKOFF_BASE = 0.1          # seconds; before retry n we wait BACKOFF_BASE * 2**n, +-50% jitter
+ CHECKOUT_DEADLINE = 2.5     # seconds; every checkout answers within this
+-DB_TIMEOUT = 1.0            # seconds per DB statement (including getting a connection)
++DB_TIMEOUT = 10.0            # seconds per DB statement (including getting a connection)
+ STALE_PENDING_AFTER = 3.0   # seconds; the reaper fails older PENDING orders that nobody is finishing
+ RETRYABLE_STATUS = {502, 503, 504}
+ 
