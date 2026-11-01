@@ -1,0 +1,62 @@
+% ---------------------------------------------------------------------------------------------
+% Section 4: Expected Findings and Evaluation Plan (#14). Paste after Section 3.
+% Our project is an empirical study (RQ1, RQ2) plus a tool (RQ3), so this section covers both:
+% hypotheses and implications for the study, and benchmark / baselines / metrics for ReliGuard.
+% ---------------------------------------------------------------------------------------------
+
+\section{Expected Findings and Evaluation Plan}
+\label{sec:expected}
+
+\paragraph{Benchmark and metrics.}
+The benchmark is Version~0, the eight change requests, and the 12 property checks; the 72 versions
+the agents produce are our data. For each version we record the functional pass rate (the agent's
+own tests and our nine functional tests), which properties regress, and every value they measured.
+For RQ1 we report the fraction of versions with at least one regression, the number of properties
+broken per version, and how both develop from change~1 to change~8, alongside the functional pass
+rate. For RQ2 we cross-tabulate regressions by change and by fault type, and two authors
+independently label each regression's root cause from the diff (for example removed timeout,
+unbounded retry, deadline bypassed, idempotency key lost, compensation skipped), resolving
+disagreements by discussion. For RQ3 the unit is one regression. The same agent repairs it twice
+from the same starting version, once with \textsc{ReliGuard}'s evidence and once with a baseline that gives
+only the failing check's name and raw output, the feedback used by prior repair
+work~\cite{chen2024selfdebug,xia2024chatrepair}. We measure \emph{repair success} (the original
+property passes again), \emph{clean repair} (the whole suite passes, D4), \emph{collateral
+regressions} (properties the repair newly breaks), and \emph{functional preservation} (the requested
+feature still works), plus turns and cost.
+
+\paragraph{H1: functional tests miss most reliability regressions.}
+We expect a large gap between the two pass rates: agents' own tests will pass in nearly every
+version, while a substantial share of versions, in the tens of percent, will break at least one
+property. The pilot already shows this pattern (47/47 tests passing, 3 of 10 properties broken).
+We also expect regressions to accumulate. Once a change removes a guarantee, later changes have
+no test that would restore it, so the number of broken properties should not decrease along the
+sequence. If confirmed, this means ``all tests pass'' is a weak acceptance criterion for
+agent-maintained services, and that benchmarks that evaluate agents over long change sequences
+with functional tests alone~\cite{deng2026evoclaw,le2025sweevo} overestimate how safe those
+agents' changes are.
+
+\paragraph{H2: the change determines the property.}
+We expect regressions to concentrate in the changes that touch the call path (payment retries, the
+payment timeout, the notification service on the checkout path, the database table) and in the
+properties about time and repetition (P1--P4), more than in idempotency (P5, P6), which the
+original code makes explicit. We also expect a common cause: agents add a new limit (a retry window,
+a timeout) without connecting it to the existing end-to-end deadline, as change~02 did. If this
+holds, reviewers and tools can focus fault injection on a small set of change types instead of
+running every check everywhere, and agent instructions can name the specific invariants that
+tend to break.
+
+\paragraph{H3: structured evidence produces cleaner repairs.}
+We expect both feedback conditions to restore the failing property often, because the failing test
+name already points to the problem. The difference should appear in clean repair and collateral
+regressions. With only a raw log, an agent tends to patch the symptom (for example, lowering one
+timeout so a test passes) and can break another property. With the injected fault, the measured
+values, and the diff that caused the regression, it can restore the original mechanism. If
+confirmed, this supports building fault-injection feedback into agent workflows as a standard step
+after each change, and it shows that the kind of feedback matters, not just the amount.
+
+\paragraph{Threats.}
+Our results come from one application that we wrote ourselves, and from three agents at fixed
+versions. We mitigate this by modeling Version~0 on a widely used reference
+application~\cite{onlineboutique}, releasing every prompt, check, and transcript, and validating
+the checks for stability and sensitivity (Section~\ref{sec:props}). The findings describe how these
+agents behave on this benchmark; showing that they generalize to other systems is future work.
