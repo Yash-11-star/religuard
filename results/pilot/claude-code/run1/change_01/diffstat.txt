@@ -1,0 +1,12 @@
+ Makefile                            |  2 +-
+ README.md                           | 29 +++++++++---
+ docker-compose.yml                  | 27 ++++++++++-
+ infra/postgres/init.sql             |  1 +
+ infra/show_proxies.py               |  2 +-
+ infra/toxiproxy.json                |  6 +++
+ services/notification/__init__.py   |  0
+ services/notification/app.py        | 92 +++++++++++++++++++++++++++++++++++++
+ services/order/app.py               | 55 ++++++++++++++++++----
+ tests/services/test_notification.py | 56 ++++++++++++++++++++++
+ tests/services/test_order.py        | 63 +++++++++++++++++++++++--
+ 11 files changed, 311 insertions(+), 22 deletions(-)

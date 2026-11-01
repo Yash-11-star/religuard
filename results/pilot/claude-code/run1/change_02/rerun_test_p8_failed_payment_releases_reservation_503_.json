@@ -1,0 +1,32 @@
+{
+  "properties/test_p7_p10_recovery_consistency.py::test_p8_failed_payment_releases_reservation[503]": {
+    "outcome": "failed",
+    "duration_s": 13.652,
+    "message": "AssertionError: expected the checkout to fail, got 200: {\"order_id\":\"4c2f01f37ee245e3a29e6aa673e2dba9\",\"status\":\"CONFIRMED\",\"charge_id\":1}\nassert 200 >= 400\n +  where 200 = <Response [200 OK]>.status_code",
+    "measured": [
+      {
+        "call": "stock",
+        "result": {
+          "sku": "SKU-1",
+          "available": 100,
+          "reserved": 0
+        }
+      },
+      {
+        "call": "checkout",
+        "kwargs": {
+          "qty": 3
+        },
+        "result": {
+          "status": 200,
+          "elapsed_s": 13.65,
+          "body": {
+            "order_id": "4c2f01f37ee245e3a29e6aa673e2dba9",
+            "status": "CONFIRMED",
+            "charge_id": 1
+          }
+        }
+      }
+    ]
+  }
+}

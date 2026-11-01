@@ -1,0 +1,588 @@
+diff --git a/Makefile b/Makefile
+index 7ed84a0..646e965 100644
+--- a/Makefile
++++ b/Makefile
+@@ -5,7 +5,7 @@ export BUILDX_BUILDER ?= default
+ COMPOSE   := docker compose
+ TOXIPROXY := http://localhost:8474
+ # Services with POST /admin/reset. Order first, so its background finalizers stop before the others reset.
+-SERVICE_PORTS := 8000 8001 8002
++SERVICE_PORTS := 8000 8001 8002 8003
+ VENV      := .venv
+ 
+ .PHONY: help up down reset proxies ps logs clean size prune venv test-services
+diff --git a/README.md b/README.md
+index 7bf09de..16d3d18 100644
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,6 @@
+ # Online store
+ 
+-Three FastAPI services (order, payment, inventory) with Postgres and Toxiproxy, run with docker-compose.
++Four FastAPI services (order, payment, inventory, notification) with Postgres and Toxiproxy, run with docker-compose.
+ 
+ ## Running locally
+ 
+@@ -20,7 +20,7 @@ make help      # list all targets
+ 
+ **Disk budget: under 1 GB.** Currently ~620 MB: Postgres Alpine 366 MB, shared services image 116 MB, Toxiproxy 23 MB, build cache ~116 MB; no volumes. To keep it that way:
+ 
+-- Use Alpine images. The three Python services share **one** image built from `python:3.12-alpine` with `pip install --no-cache-dir`; only the start command differs.
++- Use Alpine images. The four Python services share **one** image built from `python:3.12-alpine` with `pip install --no-cache-dir`; only the start command differs.
+ - No Docker volumes. Postgres stores its data in RAM (tmpfs, 256 MB cap).
+ - Builds use Docker's built-in `default` builder (set in the Makefile), not whatever buildx builder is globally active, so other projects' caches are never touched or grown.
+ - Run `make prune` after many rebuilds and `make size` to check.
+@@ -30,13 +30,15 @@ make help      # list all targets
+ | Order service | 8000 | see [Order API](#order-api) |
+ | Payment service | 8001 | see [Payment API](#payment-api) |
+ | Inventory service | 8002 | see [Inventory API](#inventory-api) |
+-| Postgres | 55432 | user/password `religuard`; databases `orders`, `payments`, `inventory` |
++| Notification service | 8003 | see [Notification API](#notification-api) |
++| Postgres | 55432 | user/password `religuard`; databases `orders`, `payments`, `inventory`, `notifications` |
+ | Toxiproxy API | 8474 | fault injection (latency, outages) |
+ | Proxy `payment` | 18001 | Order → Payment |
+ | Proxy `inventory` | 18002 | Order → Inventory |
++| Proxy `notification` | 18003 | Order → Notification |
+ | Proxy `order_db` | 15432 | Order → Postgres |
+ 
+-Inside Docker, the Order service must use `toxiproxy:18001`, `toxiproxy:18002`, and `toxiproxy:15432`, never the services directly; otherwise faults are not injected.
++Inside Docker, the Order service must use `toxiproxy:18001`, `toxiproxy:18002`, `toxiproxy:18003`, and `toxiproxy:15432`, never the services directly; otherwise faults are not injected.
+ 
+ Try a fault by hand:
+ 
+@@ -53,11 +55,11 @@ Note: a latency toxic delays every round trip, so on `order_db` a new Postgres c
+ 
+ `services/order/app.py`, port 8000. It reaches Payment, Inventory, and its own database **only through Toxiproxy**.
+ 
+-Checkout flow: create `PENDING` order → reserve stock → charge → commit stock → `CONFIRMED`. On any failure the order becomes `FAILED` and reserved stock is released.
++Checkout flow: create `PENDING` order → reserve stock → charge → commit stock → `CONFIRMED` (then, if `customer_email` was given, a confirmation is sent to Notification). On any failure the order becomes `FAILED` and reserved stock is released.
+ 
+ | Method | Path | What it does |
+ |---|---|---|
+-| POST | `/checkout` | Body `{"sku", "qty", "amount"}`, optional header `Idempotency-Key`. 200 `CONFIRMED`; a repeated key returns the same order (no second charge); 202 if paid but still finalizing |
++| POST | `/checkout` | Body `{"sku", "qty", "amount", "customer_email"?}` (invalid email → 422), optional header `Idempotency-Key`. 200 `CONFIRMED`; a repeated key returns the same order (no second charge); 202 if paid but still finalizing |
+ | GET | `/orders/{id}` | One order |
+ | GET | `/admin/orders?status=` | Orders, optionally filtered by `PENDING` / `CONFIRMED` / `FAILED` |
+ | POST | `/admin/reset` | Stop background work and delete all orders |
+@@ -116,10 +118,23 @@ Each order has at most one reservation: `RESERVED` → `COMMITTED` (payment succ
+ | POST | `/admin/reset` | Clear reservations and re-seed stock |
+ | GET | `/health` | `{"status": "ok"}` if the DB is reachable |
+ 
++## Notification API
++
++`services/notification/app.py`, port 8003 (Order calls it via `toxiproxy:18003`). Does not send real email yet; it only stores each notification in its own `notifications` database.
++
++Order sends the confirmation from a background task after an order becomes `CONFIRMED` and the checkout had a `customer_email`. It is best-effort: up to 5 attempts with backoff, and a Notification outage never slows or fails a checkout (if all attempts fail, the notification is lost). Failed orders and checkouts without an email send nothing.
++
++| Method | Path | What it does |
++|---|---|---|
++| POST | `/notifications` | `{"order_id", "recipient", "message"}`. 201 when stored; one notification per `order_id`, so a repeat returns the stored one (200, `"replayed": true`). Invalid recipient → 422 |
++| GET | `/notifications?order_id=` | Stored notifications (`id`, `order_id`, `recipient`, `message`, `created_at`), optionally for one order |
++| POST | `/admin/reset` | Delete all notifications |
++| GET | `/health` | `{"status": "ok"}` if the DB is reachable |
++
+ ## Repository layout
+ 
+ ```
+-services/{order,payment,inventory}/   FastAPI services
++services/{order,payment,inventory,notification}/  FastAPI services
+ infra/                                docker-compose, Toxiproxy config, k8s manifests, Chaos Mesh
+ tests/functional/                     normal (no-fault) tests
+ ```
+diff --git a/docker-compose.yml b/docker-compose.yml
+index 25eb786..b144d1c 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -2,7 +2,7 @@
+ #   payment   -> toxiproxy:18001
+ #   inventory -> toxiproxy:18002
+ #   postgres  -> toxiproxy:15432  (Order's DB only; Payment and Inventory use postgres:5432 directly)
+-# Services are added in #2 (payment), #3 (inventory), #4 (order).
++# Services are added in #2 (payment), #3 (inventory), #4 (order), notification.
+ #
+ # Disk budget: keep everything for this project under 1 GB (check with `make size`).
+ #   - Alpine images only; the three Python services should share ONE image (python:3.12-alpine,
+@@ -39,6 +39,7 @@ services:
+       - "18001:18001"   # proxy: payment
+       - "18002:18002"   # proxy: inventory
+       - "15432:15432"   # proxy: order_db
++      - "18003:18003"   # proxy: notification
+     volumes:
+       - ./infra/toxiproxy.json:/config/toxiproxy.json:ro
+     depends_on:
+@@ -47,7 +48,7 @@ services:
+ 
+   payment:
+     build: ./services
+-    image: religuard-services:dev   # shared by all three services
++    image: religuard-services:dev   # shared by all four services
+     command: ["uvicorn", "payment.app:app", "--host", "0.0.0.0", "--port", "8001"]
+     environment:
+       DATABASE_URL: postgresql://religuard:religuard@postgres:5432/payments
+@@ -81,6 +82,25 @@ services:
+       payment:
+         condition: service_started   # ensures the shared image is built first
+ 
++  notification:
++    image: religuard-services:dev   # built by the payment service
++    pull_policy: never
++    command: ["uvicorn", "notification.app:app", "--host", "0.0.0.0", "--port", "8003"]
++    environment:
++      DATABASE_URL: postgresql://religuard:religuard@postgres:5432/notifications
++    ports:
++      - "8003:8003"
++    healthcheck:
++      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8003/health"]
++      interval: 2s
++      timeout: 3s
++      retries: 30
++    depends_on:
++      postgres:
++        condition: service_healthy
++      payment:
++        condition: service_started   # ensures the shared image is built first
++
+   order:
+     image: religuard-services:dev   # built by the payment service
+     pull_policy: never
+@@ -90,6 +110,7 @@ services:
+       DATABASE_URL: postgresql://religuard:religuard@toxiproxy:15432/orders
+       PAYMENT_URL: http://toxiproxy:18001
+       INVENTORY_URL: http://toxiproxy:18002
++      NOTIFICATION_URL: http://toxiproxy:18003
+     ports:
+       - "8000:8000"
+     healthcheck:
+@@ -104,3 +125,5 @@ services:
+         condition: service_healthy
+       inventory:
+         condition: service_healthy
++      notification:
++        condition: service_healthy
+diff --git a/infra/postgres/init.sql b/infra/postgres/init.sql
+index 2e91a32..6bffdad 100644
+--- a/infra/postgres/init.sql
++++ b/infra/postgres/init.sql
+@@ -3,3 +3,4 @@
+ CREATE DATABASE orders;
+ CREATE DATABASE payments;
+ CREATE DATABASE inventory;
++CREATE DATABASE notifications;
+diff --git a/infra/show_proxies.py b/infra/show_proxies.py
+index 0b64132..fdf5245 100644
+--- a/infra/show_proxies.py
++++ b/infra/show_proxies.py
+@@ -9,4 +9,4 @@ with urllib.request.urlopen(f"{api}/proxies", timeout=5) as resp:
+ 
+ for name, p in sorted(proxies.items()):
+     toxics = ", ".join(f"{t['name']}({t['type']})" for t in p["toxics"]) or "none"
+-    print(f"  {name:<10} {p['listen']:<14} -> {p['upstream']:<16} enabled={p['enabled']}  toxics: {toxics}")
++    print(f"  {name:<13} {p["listen"]:<14} -> {p["upstream"]:<20} enabled={p['enabled']}  toxics: {toxics}")
+diff --git a/infra/toxiproxy.json b/infra/toxiproxy.json
+index e437b8b..c5b0539 100644
+--- a/infra/toxiproxy.json
++++ b/infra/toxiproxy.json
+@@ -11,6 +11,12 @@
+     "upstream": "inventory:8002",
+     "enabled": true
+   },
++  {
++    "name": "notification",
++    "listen": "0.0.0.0:18003",
++    "upstream": "notification:8003",
++    "enabled": true
++  },
+   {
+     "name": "order_db",
+     "listen": "0.0.0.0:15432",
+diff --git a/services/notification/__init__.py b/services/notification/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/services/notification/app.py b/services/notification/app.py
+new file mode 100644
+index 0000000..def9a7a
+--- /dev/null
++++ b/services/notification/app.py
+@@ -0,0 +1,92 @@
++"""Notification service.
++
++Stores every notification it is asked to send (order id, recipient, message, created time). It does
++not send real email yet. POST /notifications is idempotent per order_id, so Order can retry safely.
++"""
++import os
++from contextlib import asynccontextmanager
++
++import asyncpg
++from fastapi import FastAPI
++from fastapi.responses import JSONResponse
++from pydantic import BaseModel, Field
++
++DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://religuard:religuard@postgres:5432/notifications")
++
++SCHEMA = """
++CREATE TABLE IF NOT EXISTS notifications (
++    id         BIGSERIAL PRIMARY KEY,
++    order_id   TEXT NOT NULL UNIQUE,
++    recipient  TEXT NOT NULL,
++    message    TEXT NOT NULL,
++    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
++);
++"""
++
++
++@asynccontextmanager
++async def lifespan(app: FastAPI):
++    app.state.pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=10, command_timeout=5)
++    async with app.state.pool.acquire() as con:
++        await con.execute(SCHEMA)
++    yield
++    await app.state.pool.close()
++
++
++app = FastAPI(title="notification", lifespan=lifespan)
++
++
++class NotificationRequest(BaseModel):
++    order_id: str = Field(min_length=1)
++    recipient: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", max_length=320)
++    message: str = Field(min_length=1)
++
++
++def body(row, replayed: bool | None = None) -> dict:
++    out = {
++        "id": row["id"],
++        "order_id": row["order_id"],
++        "recipient": row["recipient"],
++        "message": row["message"],
++        "created_at": row["created_at"].isoformat(),
++    }
++    if replayed is not None:
++        out["replayed"] = replayed
++    return out
++
++
++@app.post("/notifications")
++async def create(req: NotificationRequest):
++    async with app.state.pool.acquire() as con:
++        row = await con.fetchrow(
++            """INSERT INTO notifications (order_id, recipient, message) VALUES ($1, $2, $3)
++               ON CONFLICT (order_id) DO NOTHING RETURNING *""",
++            req.order_id, req.recipient, req.message,
++        )
++        if row is not None:
++            return JSONResponse(body(row, replayed=False), status_code=201)
++        row = await con.fetchrow("SELECT * FROM notifications WHERE order_id = $1", req.order_id)
++    return body(row, replayed=True)
++
++
++@app.get("/notifications")
++async def list_notifications(order_id: str | None = None):
++    async with app.state.pool.acquire() as con:
++        rows = await con.fetch(
++            "SELECT * FROM notifications WHERE $1::text IS NULL OR order_id = $1 ORDER BY id", order_id
++        )
++    return [body(r) for r in rows]
++
++
++@app.get("/health")
++async def health():
++    async with app.state.pool.acquire() as con:
++        await con.fetchval("SELECT 1")
++    return {"status": "ok"}
++
++
++@app.post("/admin/reset")
++async def reset():
++    async with app.state.pool.acquire() as con:
++        await con.execute("TRUNCATE notifications RESTART IDENTITY")
++    return {"status": "reset"}
+diff --git a/services/order/app.py b/services/order/app.py
+index fd6d2dd..c9ac77f 100644
+--- a/services/order/app.py
++++ b/services/order/app.py
+@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field
+ DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://religuard:religuard@toxiproxy:15432/orders")
+ PAYMENT_URL = os.environ.get("PAYMENT_URL", "http://toxiproxy:18001")
+ INVENTORY_URL = os.environ.get("INVENTORY_URL", "http://toxiproxy:18002")
++NOTIFICATION_URL = os.environ.get("NOTIFICATION_URL", "http://toxiproxy:18003")
+ 
+ ATTEMPT_TIMEOUT = 1.0       # seconds per call to Payment or Inventory
+ MAX_ATTEMPTS = 3            # tries per call, including the first
+@@ -36,6 +37,7 @@ BACKOFF_BASE = 0.1          # seconds; before retry n we wait BACKOFF_BASE * 2**
+ CHECKOUT_DEADLINE = 2.5     # seconds; every checkout answers within this
+ DB_TIMEOUT = 1.0            # seconds per DB statement (including getting a connection)
+ STALE_PENDING_AFTER = 3.0   # seconds; the reaper fails older PENDING orders that nobody is finishing
++NOTIFY_ATTEMPTS = 5         # tries to deliver a confirmation notification; never affects the checkout
+ RETRYABLE_STATUS = {502, 503, 504}
+ 
+ # Error code -> HTTP status returned to the client.
+@@ -72,6 +74,8 @@ CREATE TABLE IF NOT EXISTS orders (
+ finalizers: dict[str, asyncio.Task] = {}
+ # DB statements we stopped waiting for (see db()); /admin/reset waits for them so nothing lands late.
+ db_stragglers: set[asyncio.Task] = set()
++# Fire-and-forget confirmation notifications still being delivered.
++notifiers: set[asyncio.Task] = set()
+ 
+ 
+ class CheckoutFailed(Exception):
+@@ -92,6 +96,7 @@ class CheckoutRequest(BaseModel):
+     sku: str = Field(min_length=1)
+     qty: int = Field(gt=0)
+     amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
++    customer_email: str | None = Field(default=None, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", max_length=320)
+ 
+ 
+ # ---------------------------------------------------------------- dependencies
+@@ -191,8 +196,12 @@ async def inventory_transition(action: str, order_id: str) -> None:
+         raise CheckoutFailed("inventory_unavailable")
+ 
+ 
+-async def finalize(order_id: str, status: str, error: str | None, release: bool, charge_id: int | None) -> None:
+-    """Settle the reservation, then write the final status. Retries until it succeeds."""
++async def finalize(order_id: str, status: str, error: str | None, release: bool, charge_id: int | None,
++                   req: CheckoutRequest | None = None) -> None:
++    """Settle the reservation, then write the final status. Retries until it succeeds.
++
++    Once an order is CONFIRMED, its confirmation notification is sent in a separate task.
++    """
+     delay = BACKOFF_BASE
+     while True:
+         try:
+@@ -206,14 +215,41 @@ async def finalize(order_id: str, status: str, error: str | None, release: bool,
+                    WHERE id = $1 AND status = 'PENDING'""",
+                 order_id, status, error, charge_id,
+             )
++            if status == "CONFIRMED" and req is not None:
++                start_notifier(order_id, req)
+             return
+         except CheckoutFailed:
+             await asyncio.sleep(delay)
+             delay = min(delay * 2, 2.0)
+ 
+ 
+-def start_finalizer(order_id: str, status: str, error: str | None, release: bool, charge_id: int | None = None):
+-    task = asyncio.create_task(finalize(order_id, status, error, release, charge_id))
++async def notify(order_id: str, email: str, req: CheckoutRequest) -> None:
++    """Best-effort order-confirmation notification. Failures are dropped: the order is already confirmed."""
++    message = f"Your order {order_id} is confirmed: {req.qty} x {req.sku}, total {req.amount}."
++    for attempt in range(NOTIFY_ATTEMPTS):
++        try:
++            resp = await app.state.http.post(
++                f"{NOTIFICATION_URL}/notifications",
++                json={"order_id": order_id, "recipient": email, "message": message},
++            )
++            if resp.status_code not in RETRYABLE_STATUS:
++                return  # stored (201/200) or rejected for good (4xx); the endpoint is idempotent per order
++        except httpx.HTTPError:
++            pass
++        await asyncio.sleep(BACKOFF_BASE * 2**attempt * random.uniform(0.5, 1.5))
++
++
++def start_notifier(order_id: str, req: CheckoutRequest) -> None:
++    if not req.customer_email:
++        return
++    task = asyncio.create_task(notify(order_id, req.customer_email, req))
++    notifiers.add(task)
++    task.add_done_callback(lambda t: (notifiers.discard(t), t.cancelled() or t.exception()))
++
++
++def start_finalizer(order_id: str, status: str, error: str | None, release: bool, charge_id: int | None = None,
++                    req: CheckoutRequest | None = None):
++    task = asyncio.create_task(finalize(order_id, status, error, release, charge_id, req))
+     finalizers[order_id] = task
+     task.add_done_callback(lambda _: finalizers.pop(order_id, None) if finalizers.get(order_id) is task else None)
+     return task
+@@ -266,9 +302,10 @@ def order_response(row) -> JSONResponse:
+ 
+ 
+ async def finish(order_id: str, status: str, error: str | None, deadline: Deadline,
+-                 release: bool = False, charge_id: int | None = None) -> JSONResponse:
++                 release: bool = False, charge_id: int | None = None,
++                 req: CheckoutRequest | None = None) -> JSONResponse:
+     """Finish the order in the background and wait for it only until the checkout deadline."""
+-    task = start_finalizer(order_id, status, error, release, charge_id)
++    task = start_finalizer(order_id, status, error, release, charge_id, req)
+     try:
+         await asyncio.wait_for(asyncio.shield(task), timeout=max(deadline.remaining(), 0))
+     except TimeoutError:
+@@ -310,7 +347,7 @@ async def lifespan(app: FastAPI):
+     reaper_task = asyncio.create_task(reaper())
+     yield
+     reaper_task.cancel()
+-    for task in list(finalizers.values()):
++    for task in list(finalizers.values()) + list(notifiers):
+         task.cancel()
+     await app.state.http.aclose()
+     await app.state.pool.close()
+@@ -361,7 +398,7 @@ async def checkout(req: CheckoutRequest, idempotency_key: str | None = Header(de
+     except Exception:
+         return await finish(order_id, "FAILED", "internal_error", deadline, release=True)
+ 
+-    return await finish(order_id, "CONFIRMED", None, deadline, charge_id=paid["charge_id"])
++    return await finish(order_id, "CONFIRMED", None, deadline, charge_id=paid["charge_id"], req=req)
+ 
+ 
+ @app.get("/orders/{order_id}")
+@@ -398,6 +435,8 @@ async def reset():
+     for task in list(finalizers.values()):
+         task.cancel()
+     finalizers.clear()
++    for task in list(notifiers):
++        task.cancel()
+     if db_stragglers:
+         await asyncio.wait(set(db_stragglers), timeout=10)
+     await db("execute", "TRUNCATE orders", timeout=5)
+diff --git a/tests/services/test_notification.py b/tests/services/test_notification.py
+new file mode 100644
+index 0000000..dee6c14
+--- /dev/null
++++ b/tests/services/test_notification.py
+@@ -0,0 +1,56 @@
++"""API tests for the Notification service. Run against the live stack: `make up && make test-services`."""
++import os
++import uuid
++
++import httpx
++import pytest
++
++NOTIFICATION = os.environ.get("NOTIFICATION_URL", "http://localhost:8003")
++
++
++@pytest.fixture
++def client():
++    with httpx.Client(timeout=10) as c:
++        c.post(f"{NOTIFICATION}/admin/reset").raise_for_status()
++        yield c
++
++
++def send(client, order_id=None, recipient="ann@example.com", message="hello"):
++    return client.post(
++        f"{NOTIFICATION}/notifications",
++        json={"order_id": order_id or uuid.uuid4().hex, "recipient": recipient, "message": message},
++    )
++
++
++def test_store_and_list_by_order(client):
++    r = send(client, "o-1", "ann@example.com", "Order o-1 confirmed")
++    assert r.status_code == 201
++    send(client, "o-2")
++    found = client.get(f"{NOTIFICATION}/notifications", params={"order_id": "o-1"}).json()
++    assert len(found) == 1
++    assert found[0]["order_id"] == "o-1"
++    assert found[0]["recipient"] == "ann@example.com"
++    assert found[0]["message"] == "Order o-1 confirmed"
++    assert found[0]["created_at"]
++    assert len(client.get(f"{NOTIFICATION}/notifications").json()) == 2
++
++
++def test_same_order_is_stored_once(client):
++    assert send(client, "o-1").status_code == 201
++    again = send(client, "o-1", message="different")
++    assert again.status_code == 200
++    assert again.json()["replayed"] is True
++    assert len(client.get(f"{NOTIFICATION}/notifications", params={"order_id": "o-1"}).json()) == 1
++
++
++def test_unknown_order_returns_empty_list(client):
++    assert client.get(f"{NOTIFICATION}/notifications", params={"order_id": "nope"}).json() == []
++
++
++@pytest.mark.parametrize("recipient", ["", "nope", "a@b"])
++def test_invalid_recipient_rejected(client, recipient):
++    assert send(client, recipient=recipient).status_code == 422
++
++
++def test_health(client):
++    assert client.get(f"{NOTIFICATION}/health").json() == {"status": "ok"}
+diff --git a/tests/services/test_order.py b/tests/services/test_order.py
+index 3f60bed..8aa2e1f 100644
+--- a/tests/services/test_order.py
++++ b/tests/services/test_order.py
+@@ -12,6 +12,7 @@ import pytest
+ ORDER = os.environ.get("ORDER_URL", "http://localhost:8000")
+ PAYMENT = os.environ.get("PAYMENT_URL", "http://localhost:8001")
+ INVENTORY = os.environ.get("INVENTORY_URL", "http://localhost:8002")
++NOTIFICATION = os.environ.get("NOTIFICATION_URL", "http://localhost:8003")
+ TOXIPROXY = os.environ.get("TOXIPROXY_URL", "http://localhost:8474")
+ 
+ 
+@@ -19,16 +20,16 @@ TOXIPROXY = os.environ.get("TOXIPROXY_URL", "http://localhost:8474")
+ def client():
+     with httpx.Client(timeout=10) as c:
+         c.post(f"{TOXIPROXY}/reset").raise_for_status()
+-        for base in (ORDER, PAYMENT, INVENTORY):
++        for base in (ORDER, PAYMENT, INVENTORY, NOTIFICATION):
+             c.post(f"{base}/admin/reset").raise_for_status()
+         yield c
+         c.post(f"{TOXIPROXY}/reset")
+ 
+ 
+-def checkout(client, key=None, sku="SKU-1", qty=2, amount="20.00"):
++def checkout(client, key=None, sku="SKU-1", qty=2, amount="20.00", **extra):
+     return client.post(
+         f"{ORDER}/checkout",
+-        json={"sku": sku, "qty": qty, "amount": amount},
++        json={"sku": sku, "qty": qty, "amount": amount, **extra},
+         headers={"Idempotency-Key": key or uuid.uuid4().hex},
+     )
+ 
+@@ -121,3 +122,59 @@ def test_slow_payment_still_answers_within_3s(client):
+     assert r.status_code == 504
+     assert r.json()["error"] == "payment_timeout"
+     assert elapsed < 3
++
++
++def notifications(client, order_id, wait=0.0):
++    """Notifications are sent in the background after the order is confirmed, so poll up to `wait` seconds."""
++    deadline = time.monotonic() + wait
++    while True:
++        found = client.get(f"{NOTIFICATION}/notifications", params={"order_id": order_id}).json()
++        if found or time.monotonic() >= deadline:
++            return found
++        time.sleep(0.1)
++
++
++def test_confirmed_checkout_with_email_sends_notification(client):
++    r = checkout(client, customer_email="ann@example.com")
++    assert r.status_code == 200
++    order_id = r.json()["order_id"]
++    sent = notifications(client, order_id, wait=5)
++    assert len(sent) == 1
++    assert sent[0]["recipient"] == "ann@example.com"
++    assert order_id in sent[0]["message"]
++
++
++def test_checkout_without_email_sends_no_notification(client):
++    order_id = checkout(client).json()["order_id"]
++    time.sleep(0.5)
++    assert notifications(client, order_id) == []
++
++
++def test_failed_checkout_sends_no_notification(client):
++    r = checkout(client, sku="SKU-3", qty=1, customer_email="ann@example.com")
++    assert r.status_code == 409
++    time.sleep(0.5)
++    assert notifications(client, r.json()["order_id"]) == []
++
++
++def test_replayed_checkout_sends_one_notification(client):
++    key = uuid.uuid4().hex
++    order_id = checkout(client, key, customer_email="ann@example.com").json()["order_id"]
++    checkout(client, key, customer_email="ann@example.com")
++    time.sleep(0.5)
++    assert len(notifications(client, order_id, wait=5)) == 1
++
++
++def test_invalid_email_is_rejected(client):
++    assert checkout(client, customer_email="not-an-email").status_code == 422
++    assert stock(client) == (100, 0)
++
++
++def test_notification_outage_does_not_affect_checkout(client):
++    client.post(f"{TOXIPROXY}/proxies/notification", json={"enabled": False}).raise_for_status()
++    r = checkout(client, customer_email="ann@example.com")
++    assert r.status_code == 200
++    assert r.json()["status"] == "CONFIRMED"
++    # Re-enable; the background retries should still deliver it.
++    client.post(f"{TOXIPROXY}/proxies/notification", json={"enabled": True}).raise_for_status()
++    assert len(notifications(client, r.json()["order_id"], wait=5)) == 1

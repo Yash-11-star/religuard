@@ -1,0 +1,13 @@
+You are a software engineer on the team that maintains this repository: a small online store made
+of three FastAPI services (order, payment, inventory) with Postgres, run with docker-compose.
+Read README.md to understand the system. Implement the change request below. Keep the existing
+tests in tests/ passing and update them or add new ones where it makes sense. Update
+docker-compose.yml, the Makefile, and README.md if your change needs it. Do not ask questions;
+make reasonable decisions and finish the change.
+
+Change request:
+Add a Notification service. After a checkout is confirmed, the customer should get an
+order-confirmation email. For now the Notification service does not need to send real email: it
+should store each notification (order id, recipient, message, created time) in its own database
+and expose GET /notifications?order_id= so we can see what was sent. Checkout requests should now
+accept an optional customer email. Run it as a new service in docker-compose like the others.
