@@ -8,7 +8,7 @@ TOXIPROXY := http://localhost:8474
 SERVICE_PORTS := 8000 8001 8002
 VENV      := .venv
 
-.PHONY: help up down reset proxies ps logs clean size prune venv test-services properties
+.PHONY: help up down reset proxies ps logs clean size prune venv test-services test-functional properties test-properties
 
 help:  ## Show available targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -39,8 +39,13 @@ $(VENV)/.installed: tests/requirements.txt
 test-services: venv  ## Run per-service API tests against the running stack
 	$(VENV)/bin/pytest -q tests/services
 
+test-functional: venv  ## Run the no-fault functional tests against the running stack
+	$(VENV)/bin/pytest -q tests/functional
+
 properties: venv  ## Run the reliability property checks P1-P10 against the running stack
 	$(VENV)/bin/pytest -v --durations=0 --durations-min=0.1 properties
+
+test-properties: properties  ## Same as `make properties`
 
 proxies:  ## List Toxiproxy proxies and their toxics
 	@python3 infra/show_proxies.py $(TOXIPROXY)
