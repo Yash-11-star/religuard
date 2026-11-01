@@ -1,0 +1,17 @@
+{
+  "commit": "b87b574e01381df6a64b2e2f1582761adacaef8f",
+  "dirty": false,
+  "runs": 5,
+  "suites": {
+    "functional": {
+      "total": 9,
+      "passed_every_run": 9,
+      "not_always_passing": []
+    },
+    "properties": {
+      "total": 12,
+      "passed_every_run": 12,
+      "not_always_passing": []
+    }
+  }
+}
