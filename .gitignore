@@ -29,3 +29,7 @@ results/raw/
 *.synctex.gz
 *.fdb_latexmk
 *.fls
+
+# Built report PDFs (contain student IDs; the repo is public)
+report/midpoint/*.pdf
+report/midpoint/ids.tex
