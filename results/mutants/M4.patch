@@ -1,0 +1,11 @@
+--- a/services/order/app.py
++++ b/services/order/app.py
+@@ -198,7 +198,7 @@
+         try:
+             if status == "CONFIRMED":
+                 await inventory_transition("commit", order_id)
+-            elif release:
++            elif False:
+                 await inventory_transition("release", order_id)
+             await db(
+                 "execute",

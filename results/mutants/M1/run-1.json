@@ -1,0 +1,135 @@
+{
+  "commit": "5da7e66248076d3758796ec6f30ea89a70afe682",
+  "dirty": false,
+  "run": 1,
+  "started_at": "2026-11-01T18:44:10+00:00",
+  "suites": {
+    "functional": {
+      "path": "tests/functional",
+      "passed": 9,
+      "failed": 0,
+      "error": 0,
+      "skipped": 0,
+      "total": 9,
+      "duration_s": 1.35,
+      "tests": {
+        "test_checkout::test_happy_path_confirms_and_commits_stock": {
+          "outcome": "passed",
+          "duration_s": 0.155,
+          "message": null
+        },
+        "test_checkout::test_repeated_key_returns_same_order_and_charges_once": {
+          "outcome": "passed",
+          "duration_s": 0.293,
+          "message": null
+        },
+        "test_checkout::test_key_reused_for_different_request_is_rejected": {
+          "outcome": "passed",
+          "duration_s": 0.118,
+          "message": null
+        },
+        "test_checkout::test_out_of_stock": {
+          "outcome": "passed",
+          "duration_s": 0.045,
+          "message": null
+        },
+        "test_checkout::test_unknown_sku": {
+          "outcome": "passed",
+          "duration_s": 0.048,
+          "message": null
+        },
+        "test_checkout::test_declined_payment_fails_order_and_releases_stock": {
+          "outcome": "passed",
+          "duration_s": 0.067,
+          "message": null
+        },
+        "test_checkout::test_invalid_input": {
+          "outcome": "passed",
+          "duration_s": 0.027,
+          "message": null
+        },
+        "test_checkout::test_unknown_order": {
+          "outcome": "passed",
+          "duration_s": 0.03,
+          "message": null
+        },
+        "test_checkout::test_admin_orders_filters_by_status": {
+          "outcome": "passed",
+          "duration_s": 0.062,
+          "message": null
+        }
+      }
+    },
+    "properties": {
+      "path": "properties",
+      "passed": 11,
+      "failed": 1,
+      "error": 0,
+      "skipped": 0,
+      "total": 12,
+      "duration_s": 33.27,
+      "tests": {
+        "test_p1_p3_latency_errors::test_p1_slow_payment_gives_error_within_3s": {
+          "outcome": "passed",
+          "duration_s": 2.594,
+          "message": null
+        },
+        "test_p1_p3_latency_errors::test_p2_slow_inventory_gives_error_within_3s": {
+          "outcome": "passed",
+          "duration_s": 2.568,
+          "message": null
+        },
+        "test_p1_p3_latency_errors::test_p3_payment_down_gives_clean_503": {
+          "outcome": "passed",
+          "duration_s": 1.863,
+          "message": null
+        },
+        "test_p4_p6_retries_idempotency::test_p4_payment_503_burst_bounded_retries": {
+          "outcome": "failed",
+          "duration_s": 1.449,
+          "message": "AssertionError: Payment received 5 attempts (checkout returned 503)\nassert 5 <= 3"
+        },
+        "test_p4_p6_retries_idempotency::test_p5_lost_charge_response_then_retry_charges_once": {
+          "outcome": "passed",
+          "duration_s": 2.734,
+          "message": null
+        },
+        "test_p4_p6_retries_idempotency::test_p6_duplicate_delivery_charges_once[sequential]": {
+          "outcome": "passed",
+          "duration_s": 0.086,
+          "message": null
+        },
+        "test_p4_p6_retries_idempotency::test_p6_duplicate_delivery_charges_once[concurrent]": {
+          "outcome": "passed",
+          "duration_s": 0.181,
+          "message": null
+        },
+        "test_p7_p10_recovery_consistency::test_p7_payment_restored_checkouts_recover_within_10s": {
+          "outcome": "passed",
+          "duration_s": 1.857,
+          "message": null
+        },
+        "test_p7_p10_recovery_consistency::test_p8_failed_payment_releases_reservation[decline]": {
+          "outcome": "passed",
+          "duration_s": 0.09,
+          "message": null
+        },
+        "test_p7_p10_recovery_consistency::test_p8_failed_payment_releases_reservation[payment_down]": {
+          "outcome": "passed",
+          "duration_s": 1.681,
+          "message": null
+        },
+        "test_p7_p10_recovery_consistency::test_p9_no_orders_stuck_pending_after_faults": {
+          "outcome": "passed",
+          "duration_s": 16.702,
+          "message": null
+        },
+        "test_p7_p10_recovery_consistency::test_p10_slow_db_gives_graceful_error_within_3s": {
+          "outcome": "passed",
+          "duration_s": 1.127,
+          "message": null
+        }
+      }
+    }
+  }
+}

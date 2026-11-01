@@ -1,0 +1,11 @@
+--- a/services/order/app.py
++++ b/services/order/app.py
+@@ -307,7 +307,7 @@
+     async with app.state.pool.acquire() as con:
+         await con.execute(SCHEMA)
+     app.state.http = httpx.AsyncClient(timeout=ATTEMPT_TIMEOUT)
+-    reaper_task = asyncio.create_task(reaper())
++    reaper_task = asyncio.create_task(asyncio.sleep(1e9))
+     yield
+     reaper_task.cancel()
+     for task in list(finalizers.values()):
