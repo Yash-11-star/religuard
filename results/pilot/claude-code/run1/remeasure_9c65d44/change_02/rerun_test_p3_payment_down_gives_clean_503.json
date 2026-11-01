@@ -1,0 +1,21 @@
+{
+  "properties/test_p1_p3_latency_errors.py::test_p3_payment_down_gives_clean_503": {
+    "outcome": "failed",
+    "duration_s": 18.741,
+    "message": "AssertionError: answered in 18.74s\nassert 18.739676791010424 <= 3.0",
+    "measured": [
+      {
+        "call": "checkout",
+        "result": {
+          "status": 503,
+          "elapsed_s": 18.74,
+          "body": {
+            "error": "payment_unavailable",
+            "order_id": "3a807acfa1dc43c1a076a28c60aa843d",
+            "status": "FAILED"
+          }
+        }
+      }
+    ]
+  }
+}

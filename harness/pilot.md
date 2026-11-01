@@ -11,7 +11,13 @@ Exactly what was run, in order, so the pilot can be reproduced. Results are in
 | Agent | Claude Code 2.1.309 (Homebrew cask `claude-code`), model `claude-sonnet-5-5` |
 | App under test | `origin/6-property-checks` @ `7061ad2` (Version 0 services + property checks) |
 | Prompts | `origin/11-change-prompts` @ `a6eda51` |
-| Checks | `properties/` from `origin/6-property-checks`, pytest 8.3.4, httpx 0.28.1 (`make venv`) |
+| Checks | `properties/` from `origin/6-property-checks`, pytest 8.3.4, httpx 0.28.1 (`make venv`); pilot run with `7061ad2`, re-measured with `9c65d44` (see step 3) |
+
+**Requirement: every agent workspace must be under your home folder** (e.g. `~/agent-claude-run1`).
+colima shares only the home folder with its VM, so the stack cannot bind-mount
+`infra/postgres/init.sql` from anywhere else (e.g. `/tmp`): Postgres exits and `make up` fails
+with "dependency postgres failed to start". The check's `properties/` temp copy may live anywhere,
+because pytest runs on the host.
 
 ## 1. Build the agent's working copy
 
@@ -98,6 +104,23 @@ harness/check_version.sh ../agent-claude-run1 results/pilot/claude-code/run1/cha
 5. `summarise_properties.py` writes `properties.json` (verdict + measured values per test) and
    `failures.md`; then `make down`.
 
+## 3. Re-measure with the fixed checks
+
+After the pilot, P4 and P8 were fixed on `6-property-checks` (`9c65d44`, PR #38): P4 reads the
+attempt count before asserting on the response, and P8's second case disables the Payment proxy
+for the whole checkout instead of sending 503 × 10. Scrubbed v0 and the agent's change 02
+(`83a9f0e`) were re-checked with them:
+
+```bash
+harness/make_agent_view.sh 6-property-checks ~/agent-v0-check     # tree 38c8efe5, as before
+harness/check_version.sh ~/agent-v0-check     results/pilot/claude-code/run1/remeasure_9c65d44/baseline_v0 6-property-checks
+harness/check_version.sh ../agent-claude-run1 results/pilot/claude-code/run1/remeasure_9c65d44/change_02   6-property-checks
+rm -rf ~/agent-v0-check
+```
+
+v0: 30/30 service tests, 12/12 properties. Change 02: P1, P3, P4 fail twice (P4 = 11 attempts);
+P8 [payment_down] passes.
+
 ## Results
 
 See `results/pilot/claude-code/run1/summary.md`.
@@ -107,9 +130,10 @@ See `results/pilot/claude-code/run1/summary.md`.
 - `--output-format json` saves only the agent's final message and totals (turns, cost, duration),
   not the turn-by-turn tool calls. For the study, use `--output-format stream-json --verbose` so
   the transcript shows what the agent read and ran.
-- P8 [503] and P4 assert "checkout failed" before checking their property, so a change that makes
-  checkout succeed through the fault (change 02) fails them for the wrong reason (P8) or skips the
-  measurement (P4). See the caveats in `summary.md`.
+- P8 [503] and P4 asserted "checkout failed" before checking their property, so a change that
+  makes checkout succeed through the fault (change 02) failed them for the wrong reason (P8) or
+  skipped the measurement (P4). **Fixed** in `9c65d44` and re-measured (step 3).
+- A workspace outside the home folder cannot run the stack under colima (see Environment).
 - The property checks never exercise dependencies an agent adds (change 01's Notification service).
 
 ## Deviations from the ticket text

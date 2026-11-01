@@ -1,0 +1,25 @@
+{
+  "properties/test_p4_p6_retries_idempotency.py::test_p4_payment_503_burst_bounded_retries": {
+    "outcome": "failed",
+    "duration_s": 13.381,
+    "message": "AssertionError: Payment received 11 attempts (checkout returned 200)\nassert 11 <= 3",
+    "measured": [
+      {
+        "call": "checkout",
+        "result": {
+          "status": 200,
+          "elapsed_s": 13.378,
+          "body": {
+            "order_id": "9677545035234ad5a6f7bc6f5cd3225a",
+            "status": "CONFIRMED",
+            "charge_id": 1
+          }
+        }
+      },
+      {
+        "call": "attempts",
+        "result": 11
+      }
+    ]
+  }
+}

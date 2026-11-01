@@ -1,0 +1,945 @@
+{
+  "test_p1_slow_payment_gives_error_within_3s": {
+    "property": "P1",
+    "verdict": "fail",
+    "duration_s": 18.599,
+    "message": "AssertionError: answered in 18.60s\nassert 18.59864241699688 <= 3.0",
+    "first_run": {
+      "outcome": "failed",
+      "message": "AssertionError: answered in 18.60s\nassert 18.59864241699688 <= 3.0",
+      "measured": [
+        {
+          "call": "checkout",
+          "result": {
+            "status": 504,
+            "elapsed_s": 18.599,
+            "body": {
+              "error": "payment_timeout",
+              "order_id": "2d410d7cb5b44af79ffc0123b51654bf",
+              "status": "FAILED"
+            }
+          }
+        }
+      ]
+    },
+    "rerun": {
+      "outcome": "failed",
+      "message": "AssertionError: answered in 20.01s\nassert 20.00866425014101 <= 3.0",
+      "measured": [
+        {
+          "call": "checkout",
+          "result": {
+            "status": 504,
+            "elapsed_s": 20.009,
+            "body": {
+              "error": "payment_timeout",
+              "order_id": "5d1e5d2fe8a44e42986e490d36dfb892",
+              "status": "FAILED"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "test_p2_slow_inventory_gives_error_within_3s": {
+    "property": "P1",
+    "verdict": "pass",
+    "duration_s": 2.505,
+    "message": null,
+    "measured": [
+      {
+        "call": "checkout",
+        "result": {
+          "status": 504,
+          "elapsed_s": 2.504,
+          "body": {
+            "error": "inventory_timeout",
+            "order_id": "31fff902a1014fc78ed4fb7bafc7ef72",
+            "status": "FAILED"
+          }
+        }
+      }
+    ]
+  },
+  "test_p3_payment_down_gives_clean_503": {
+    "property": "P1",
+    "verdict": "fail",
+    "duration_s": 18.798,
+    "message": "AssertionError: answered in 18.80s\nassert 18.796729875029996 <= 3.0",
+    "first_run": {
+      "outcome": "failed",
+      "message": "AssertionError: answered in 18.80s\nassert 18.796729875029996 <= 3.0",
+      "measured": [
+        {
+          "call": "checkout",
+          "result": {
+            "status": 503,
+            "elapsed_s": 18.797,
+            "body": {
+              "error": "payment_unavailable",
+              "order_id": "9dfde818b16448399350d042a81ce624",
+              "status": "FAILED"
+            }
+          }
+        }
+      ]
+    },
+    "rerun": {
+      "outcome": "failed",
+      "message": "AssertionError: answered in 18.74s\nassert 18.739676791010424 <= 3.0",
+      "measured": [
+        {
+          "call": "checkout",
+          "result": {
+            "status": 503,
+            "elapsed_s": 18.74,
+            "body": {
+              "error": "payment_unavailable",
+              "order_id": "3a807acfa1dc43c1a076a28c60aa843d",
+              "status": "FAILED"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "test_p4_payment_503_burst_bounded_retries": {
+    "property": "P4",
+    "verdict": "fail",
+    "duration_s": 12.881,
+    "message": "AssertionError: Payment received 11 attempts (checkout returned 200)\nassert 11 <= 3",
+    "first_run": {
+      "outcome": "failed",
+      "message": "AssertionError: Payment received 11 attempts (checkout returned 200)\nassert 11 <= 3",
+      "measured": [
+        {
+          "call": "checkout",
+          "result": {
+            "status": 200,
+            "elapsed_s": 12.877,
+            "body": {
+              "order_id": "de3ae251c60149f584e4f29d1e2748ac",
+              "status": "CONFIRMED",
+              "charge_id": 1
+            }
+          }
+        },
+        {
+          "call": "attempts",
+          "result": 11
+        }
+      ]
+    },
+    "rerun": {
+      "outcome": "failed",
+      "message": "AssertionError: Payment received 11 attempts (checkout returned 200)\nassert 11 <= 3",
+      "measured": [
+        {
+          "call": "checkout",
+          "result": {
+            "status": 200,
+            "elapsed_s": 13.378,
+            "body": {
+              "order_id": "9677545035234ad5a6f7bc6f5cd3225a",
+              "status": "CONFIRMED",
+              "charge_id": 1
+            }
+          }
+        },
+        {
+          "call": "attempts",
+          "result": 11
+        }
+      ]
+    }
+  },
+  "test_p5_lost_charge_response_then_retry_charges_once": {
+    "property": "P4",
+    "verdict": "pass",
+    "duration_s": 20.018,
+    "message": null,
+    "measured": [
+      {
+        "call": "checkout",
+        "kwargs": {
+          "key": "a1d007685e814d518d328373217dab98"
+        },
+        "result": {
+          "status": 504,
+          "elapsed_s": 20.009,
+          "body": {
+            "error": "payment_timeout",
+            "order_id": "64fe7cd7d11c4ca7877f803d5da19cef",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "checkout",
+        "kwargs": {
+          "key": "a1d007685e814d518d328373217dab98"
+        },
+        "result": {
+          "status": 504,
+          "elapsed_s": 0.002,
+          "body": {
+            "error": "payment_timeout",
+            "order_id": "64fe7cd7d11c4ca7877f803d5da19cef",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "charges",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "id": 1,
+              "order_id": "64fe7cd7d11c4ca7877f803d5da19cef",
+              "amount": "10.00",
+              "idempotency_key": "order-64fe7cd7d11c4ca7877f803d5da19cef",
+              "created_at": "2026-11-01T17:20:16.215974+00:00"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "test_p6_duplicate_delivery_charges_once[sequential]": {
+    "property": "P4",
+    "verdict": "pass",
+    "duration_s": 0.011,
+    "message": null,
+    "measured": [
+      {
+        "call": "checkout",
+        "kwargs": {
+          "key": "6204926ce0534f3593bea53eb59ebd29"
+        },
+        "result": {
+          "status": 200,
+          "elapsed_s": 0.009,
+          "body": {
+            "order_id": "95b216251d59432c9e8888eddee89720",
+            "status": "CONFIRMED",
+            "charge_id": 1
+          }
+        }
+      },
+      {
+        "call": "checkout",
+        "kwargs": {
+          "key": "6204926ce0534f3593bea53eb59ebd29"
+        },
+        "result": {
+          "status": 200,
+          "elapsed_s": 0.002,
+          "body": {
+            "order_id": "95b216251d59432c9e8888eddee89720",
+            "status": "CONFIRMED",
+            "sku": "SKU-1",
+            "qty": 1,
+            "amount": "10.00",
+            "charge_id": 1,
+            "error": null,
+            "created_at": "2026-11-01T17:20:36.248103+00:00",
+            "updated_at": "2026-11-01T17:20:36.254876+00:00"
+          }
+        }
+      },
+      {
+        "call": "charges",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "id": 1,
+              "order_id": "95b216251d59432c9e8888eddee89720",
+              "amount": "10.00",
+              "idempotency_key": "order-95b216251d59432c9e8888eddee89720",
+              "created_at": "2026-11-01T17:20:36.252277+00:00"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "test_p6_duplicate_delivery_charges_once[concurrent]": {
+    "property": "P4",
+    "verdict": "pass",
+    "duration_s": 0.11,
+    "message": null,
+    "measured": [
+      {
+        "call": "checkout",
+        "kwargs": {
+          "key": "e3afa39c624c4909937b44d8e9b7da86"
+        },
+        "result": {
+          "status": 200,
+          "elapsed_s": 0.008,
+          "body": {
+            "order_id": "c502ba0b0b4f4086b6785d8aebb4ca64",
+            "status": "CONFIRMED",
+            "charge_id": 1
+          }
+        }
+      },
+      {
+        "call": "checkout",
+        "kwargs": {
+          "key": "e3afa39c624c4909937b44d8e9b7da86"
+        },
+        "result": {
+          "status": 200,
+          "elapsed_s": 0.109,
+          "body": {
+            "order_id": "c502ba0b0b4f4086b6785d8aebb4ca64",
+            "status": "CONFIRMED",
+            "sku": "SKU-1",
+            "qty": 1,
+            "amount": "10.00",
+            "charge_id": 1,
+            "error": null,
+            "created_at": "2026-11-01T17:20:36.271961+00:00",
+            "updated_at": "2026-11-01T17:20:36.277732+00:00"
+          }
+        }
+      },
+      {
+        "call": "charges",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "id": 1,
+              "order_id": "c502ba0b0b4f4086b6785d8aebb4ca64",
+              "amount": "10.00",
+              "idempotency_key": "order-c502ba0b0b4f4086b6785d8aebb4ca64",
+              "created_at": "2026-11-01T17:20:36.275572+00:00"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "test_p7_payment_restored_checkouts_recover_within_10s": {
+    "property": "P7",
+    "verdict": "pass",
+    "duration_s": 19.033,
+    "message": null,
+    "measured": [
+      {
+        "call": "checkout",
+        "result": {
+          "status": 503,
+          "elapsed_s": 19.022,
+          "body": {
+            "error": "payment_unavailable",
+            "order_id": "ad677dd2c1a04ac0b4e786a10ad242a1",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "checkout",
+        "result": {
+          "status": 200,
+          "elapsed_s": 0.009,
+          "body": {
+            "order_id": "b8988bf630c4461ba15918e845861dad",
+            "status": "CONFIRMED",
+            "charge_id": 1
+          }
+        }
+      }
+    ]
+  },
+  "test_p8_failed_payment_releases_reservation[decline]": {
+    "property": "P7",
+    "verdict": "pass",
+    "duration_s": 0.01,
+    "message": null,
+    "measured": [
+      {
+        "call": "stock",
+        "result": {
+          "sku": "SKU-1",
+          "available": 100,
+          "reserved": 0
+        }
+      },
+      {
+        "call": "checkout",
+        "kwargs": {
+          "qty": 3
+        },
+        "result": {
+          "status": 402,
+          "elapsed_s": 0.006,
+          "body": {
+            "error": "card_declined",
+            "order_id": "97fc6c4f02ca4a04947e5eac44ef594d",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "stock",
+        "result": {
+          "sku": "SKU-1",
+          "available": 100,
+          "reserved": 0
+        }
+      },
+      {
+        "call": "stock",
+        "result": {
+          "sku": "SKU-1",
+          "available": 100,
+          "reserved": 0
+        }
+      }
+    ]
+  },
+  "test_p8_failed_payment_releases_reservation[payment_down]": {
+    "property": "P7",
+    "verdict": "pass",
+    "duration_s": 18.424,
+    "message": null,
+    "measured": [
+      {
+        "call": "stock",
+        "result": {
+          "sku": "SKU-1",
+          "available": 100,
+          "reserved": 0
+        }
+      },
+      {
+        "call": "checkout",
+        "kwargs": {
+          "qty": 3
+        },
+        "result": {
+          "status": 503,
+          "elapsed_s": 18.419,
+          "body": {
+            "error": "payment_unavailable",
+            "order_id": "f9251ea8bfc8476c906230b8f5599084",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "stock",
+        "result": {
+          "sku": "SKU-1",
+          "available": 100,
+          "reserved": 0
+        }
+      },
+      {
+        "call": "stock",
+        "result": {
+          "sku": "SKU-1",
+          "available": 100,
+          "reserved": 0
+        }
+      }
+    ]
+  },
+  "test_p9_no_orders_stuck_pending_after_faults": {
+    "property": "P7",
+    "verdict": "pass",
+    "duration_s": 80.792,
+    "message": null,
+    "measured": [
+      {
+        "call": "checkout",
+        "result": {
+          "status": 504,
+          "elapsed_s": 20.014,
+          "body": {
+            "error": "payment_timeout",
+            "order_id": "9279ebb511624e66b75921a3d07a22f8",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "checkout",
+        "result": {
+          "status": 504,
+          "elapsed_s": 2.504,
+          "body": {
+            "error": "inventory_timeout",
+            "order_id": "a0f4f85f8a004df6a4ebb7cc64a81141",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "checkout",
+        "result": {
+          "status": 503,
+          "elapsed_s": 19.334,
+          "body": {
+            "error": "payment_unavailable",
+            "order_id": "d549de4dadf44ce58b1753d988b94496",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "checkout",
+        "result": {
+          "status": 503,
+          "elapsed_s": 2.503,
+          "body": {
+            "error": "inventory_unavailable",
+            "order_id": "3d608c1a0ae342c0ac132486ce727c6b",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "checkout",
+        "result": {
+          "status": 200,
+          "elapsed_s": 13.386,
+          "body": {
+            "order_id": "a0e0d67c646f4423916713eb63bbec19",
+            "status": "CONFIRMED",
+            "charge_id": 11
+          }
+        }
+      },
+      {
+        "call": "checkout",
+        "result": {
+          "status": 504,
+          "elapsed_s": 20.011,
+          "body": {
+            "error": "payment_timeout",
+            "order_id": "25059659f3eb459a85c8edc88b46f716",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "checkout",
+        "result": {
+          "status": 503,
+          "elapsed_s": 1.003,
+          "body": {
+            "error": "database_unavailable",
+            "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 1,
+          "rows": [
+            {
+              "order_id": "03fd4c94ba1b4523971c9cd8c6e68c04",
+              "status": "PENDING",
+              "sku": "SKU-1",
+              "qty": 1,
+              "amount": "10.00",
+              "charge_id": null,
+              "error": null,
+              "created_at": "2026-11-01T17:22:31.678850+00:00",
+              "updated_at": "2026-11-01T17:22:31.678850+00:00"
+            }
+          ]
+        }
+      },
+      {
+        "call": "pending_orders",
+        "result": {
+          "count": 0,
+          "rows": []
+        }
+      }
+    ]
+  },
+  "test_p10_slow_db_gives_graceful_error_within_3s": {
+    "property": "P7",
+    "verdict": "pass",
+    "duration_s": 1.029,
+    "message": null,
+    "measured": [
+      {
+        "call": "checkout",
+        "result": {
+          "status": 503,
+          "elapsed_s": 1.003,
+          "body": {
+            "error": "database_unavailable",
+            "order_id": "8b5d219c77c04e078bcb8f4954ecfbba",
+            "status": "FAILED"
+          }
+        }
+      },
+      {
+        "call": "checkout",
+        "result": {
+          "status": 200,
+          "elapsed_s": 0.012,
+          "body": {
+            "order_id": "c2979970762d41e4bf9367bca2d4c673",
+            "status": "CONFIRMED",
+            "charge_id": 1
+          }
+        }
+      }
+    ]
+  }
+}
